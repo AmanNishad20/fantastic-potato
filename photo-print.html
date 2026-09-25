@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Photo Print Sheet</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%B7%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1c1b19; --paper: #faf8f4; --line: #d8d3c8;
+    --accent: #2f5d4f; --accent-soft: #e7efe9; --muted: #7a7468;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink:#efeae2; --paper:#1a1918; --line:#38352e; --accent:#7fbfa5; --accent-soft:#23322b; --muted:#a49d8d; }
+  }
+  :root[data-theme="dark"] { --ink:#efeae2; --paper:#1a1918; --line:#38352e; --accent:#7fbfa5; --accent-soft:#23322b; --muted:#a49d8d; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin:0; font-family:'Iowan Old Style','Georgia',serif; background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .app { max-width: 760px; margin: 0 auto; padding: 28px 20px 60px; }
+  h1 { font-size:1.5rem; font-weight:600; letter-spacing:-0.01em; margin:0 0 4px; }
+  .sub { color:var(--muted); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:0.9rem; margin:0 0 20px; line-height:1.5; }
+  .sans { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+  .stepper { display:flex; gap:6px; margin-bottom:26px; }
+  .stepper .dot { flex:1; height:4px; border-radius:2px; background:var(--line); }
+  .stepper .dot.done, .stepper .dot.active { background: var(--accent); }
+  .step-label { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:0.78rem; color:var(--muted); margin-bottom:22px; }
+  .step { display:none; }
+  .step.active { display:block; }
+  label { display:block; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:0.78rem; color:var(--muted); margin-bottom:8px; }
+  h2 { font-size:1.05rem; font-weight:600; margin:0 0 16px; }
+  .drop { border:1.5px dashed var(--line); border-radius:10px; padding:32px 16px; text-align:center; cursor:pointer; transition:border-color .15s,background .15s; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+  .drop:hover, .drop.drag { border-color:var(--accent); background:var(--accent-soft); }
+  .drop input { display:none; }
+  .drop-icon { font-size:1.6rem; margin-bottom:8px; opacity:.7; }
+  .drop-text { font-size:.9rem; color:var(--muted); }
+  .preview-wrap { display:flex; align-items:center; gap:16px; margin-top:16px; }
+  .preview-wrap img { max-width:90px; max-height:90px; border-radius:6px; border:1px solid var(--line); object-fit:cover; }
+  .preview-wrap button { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:.82rem; color:var(--accent); background:none; border:none; cursor:pointer; padding:0; text-decoration:underline; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .chip-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .chip { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:.82rem; padding:7px 13px; border-radius:20px; border:1px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; transition:all .15s; }
+  .chip.active { background:var(--accent); border-color:var(--accent); color:var(--paper); }
+  input[type="number"] { width:100%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:.95rem; padding:9px 11px; border-radius:8px; border:1px solid var(--line); background:var(--paper); color:var(--ink); }
+  input[type="number"]:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .unit-toggle { display:flex; gap:6px; margin-top:10px; }
+  .fit-summary { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--accent-soft); border-radius:10px; padding:16px; font-size:.88rem; line-height:1.6; margin-bottom:20px; }
+  .fit-summary strong { color:var(--accent); font-size:1.1rem; }
+  .gap-control { display:flex; align-items:center; gap:10px; margin-top:12px; }
+  .gap-control input[type="range"] { flex:1; accent-color:var(--accent); }
+  .gap-control span { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:.8rem; color:var(--muted); min-width:48px; text-align:right; }
+  .sheet-preview-frame { background:var(--line); border-radius:8px; padding:12px; display:flex; justify-content:center; overflow:auto; margin-bottom:16px; max-width:100%; }
+  #sheetCanvas { background:white; box-shadow:0 2px 10px rgba(0,0,0,.15); max-width:100%; height:auto; }
+  .actions { display:flex; gap:10px; margin-top:18px; }
+  .btn { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:.92rem; font-weight:600; padding:12px 20px; border-radius:9px; border:none; cursor:pointer; flex:1; }
+  .btn-primary { background:var(--accent); color:var(--paper); }
+  .btn-secondary { background:transparent; color:var(--ink); border:1px solid var(--line); }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .hint { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:.78rem; color:var(--muted); margin-top:8px; }
+  .nav-row { display:flex; gap:10px; margin-top:26px; }
+  .crop-frame-wrap { display:flex; flex-direction:column; align-items:center; background:var(--accent-soft); border-radius:10px; padding:18px; max-width:100%; }
+  .crop-frame { position:relative; overflow:hidden; border-radius:4px; box-shadow:0 0 0 2px var(--paper), 0 0 0 3px var(--accent); touch-action:none; cursor:grab; max-width:100%; }
+  .crop-frame.dragging { cursor:grabbing; }
+  .crop-frame img { position:absolute; top:0; left:0; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+  .zoom-row { display:flex; align-items:center; gap:10px; width:100%; max-width:320px; margin-top:16px; }
+  .zoom-row input[type="range"] { flex:1; accent-color:var(--accent); min-width:0; }
+  @media (max-width: 420px) {
+    .app { padding: 20px 14px 48px; }
+    .nav-row { flex-direction:column; }
+    .actions { flex-direction:column; }
+    .preview-wrap { flex-wrap:wrap; }
+  }
+  @media print {
+    body * { visibility:hidden; }
+    #printArea, #printArea * { visibility:visible; }
+    #printArea { position:absolute; top:0; left:0; margin:0; padding:0; }
+    @page { margin:0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Photo Print Sheet</h1>
+  <p class="sub">Upload a photo, size it, fine-tune the framing, pick your paper, and print as many copies as fit — ready to cut.</p>
+
+  <div class="stepper" id="stepperDots"></div>
+  <p class="step-label sans" id="stepLabel"></p>
+
+  <div class="step active" data-step="1">
+    <h2>1. Your photo</h2>
+    <div class="drop" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="drop-icon">📷</div>
+      <div class="drop-text">Tap to choose a photo, or drag one here</div>
+    </div>
+    <div class="preview-wrap" id="previewWrap" style="display:none;">
+      <img id="previewImg" alt="Your photo">
+      <button id="changePhoto">Change photo</button>
+    </div>
+    <p class="hint sans" id="uploadError" style="display:none; color:#b5651d;"></p>
+    <div class="nav-row"><button class="btn btn-primary" id="next1" disabled>Next: choose size</button></div>
+    <p class="hint sans" id="privacyNote" style="text-align:center; margin-top:18px;">🔒 No images are saved anywhere — everything happens locally in your browser, on your device.</p>
+  </div>
+
+  <div class="step" data-step="2">
+    <h2>2. Photo size</h2>
+    <div class="chip-row" id="sizePresets">
+      <button class="chip active" data-w="2" data-h="2" data-unit="in">2×2 in (US passport)</button>
+      <button class="chip" data-w="35" data-h="45" data-unit="mm">35×45 mm (UK/EU/India)</button>
+      <button class="chip" data-w="33" data-h="48" data-unit="mm">33×48 mm (Schengen)</button>
+      <button class="chip" data-w="50" data-h="70" data-unit="mm">50×70 mm</button>
+      <button class="chip" data-w="4" data-h="6" data-unit="in">4×6 in (postcard)</button>
+      <button class="chip" id="customChip" data-custom="1">Custom</button>
+    </div>
+    <div class="grid-2">
+      <div><label>Width</label><input type="number" inputmode="decimal" id="photoW" value="2" step="0.01" min="0.1"></div>
+      <div><label>Height</label><input type="number" inputmode="decimal" id="photoH" value="2" step="0.01" min="0.1"></div>
+    </div>
+    <p class="hint sans" id="photoSizeError" style="display:none; color:#b5651d;">Enter a width and height greater than 0.</p>
+    <div class="unit-toggle">
+      <button class="chip active" data-unit-set="in">inches</button>
+      <button class="chip" data-unit-set="mm">mm</button>
+      <button class="chip" data-unit-set="cm">cm</button>
+    </div>
+    <div class="nav-row">
+      <button class="btn btn-secondary" data-back="1">Back</button>
+      <button class="btn btn-primary" id="next2" data-next="3">Next: adjust photo</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="3">
+    <h2>3. Adjust to fit</h2>
+    <p class="hint sans" style="margin-top:-8px;">Your photo's shape may not match the size you picked. Drag to reposition (center the face) and use the slider to zoom, so nothing important gets cropped off.</p>
+    <div class="crop-frame-wrap">
+      <div class="crop-frame" id="cropFrame"><img id="cropImg" alt=""></div>
+      <div class="zoom-row">
+        <span class="sans" style="font-size:.8rem;color:var(--muted);">－</span>
+        <input type="range" id="zoomSlider" min="1" max="3" step="0.01" value="1" aria-label="Zoom photo">
+        <span class="sans" style="font-size:.8rem;color:var(--muted);">＋</span>
+      </div>
+    </div>
+    <div class="nav-row">
+      <button class="btn btn-secondary" data-back="2">Back</button>
+      <button class="btn btn-primary" data-next="4">Next: paper &amp; layout</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="4">
+    <h2>4. Paper size to print on</h2>
+    <div class="chip-row" id="paperPresets">
+      <button class="chip active" data-pw="8.27" data-ph="11.69">A4</button>
+      <button class="chip" data-pw="4" data-ph="6">4×6 in</button>
+      <button class="chip" data-pw="5" data-ph="7">5×7 in</button>
+      <button class="chip" data-pw="8.5" data-ph="11">US Letter</button>
+      <button class="chip" id="customPaperChip" data-custom="1">Custom</button>
+    </div>
+    <div class="grid-2">
+      <div><label>Paper width (in)</label><input type="number" inputmode="decimal" id="paperW" value="8.27" step="0.01" min="0.5"></div>
+      <div><label>Paper height (in)</label><input type="number" inputmode="decimal" id="paperH" value="11.69" step="0.01" min="0.5"></div>
+    </div>
+    <p class="hint sans" id="paperSizeError" style="display:none; color:#b5651d;">Enter a paper width and height greater than 0.</p>
+    <label style="margin-top:14px;">Print quality (DPI)</label>
+    <div class="chip-row" id="dpiPresets">
+      <button class="chip" data-dpi="150">150 — draft</button>
+      <button class="chip active" data-dpi="300">300 — standard print</button>
+      <button class="chip" data-dpi="600">600 — high quality</button>
+    </div>
+    <p class="hint">300 DPI is standard for sharp photo prints. Higher DPI only helps if your photo has enough resolution to support it.</p>
+    <p class="hint sans" id="canvasSizeWarning" style="display:none; color:#b5651d;">This DPI and paper size combination is too large to render safely in the browser. Lower the DPI or paper size.</p>
+    <div class="nav-row">
+      <button class="btn btn-secondary" data-back="3">Back</button>
+      <button class="btn btn-primary" id="next4" data-next="5">Next: preview</button>
+    </div>
+  </div>
+
+  <div class="step" data-step="5">
+    <h2>5. Preview &amp; print</h2>
+    <label>Spacing between photos</label>
+    <div class="gap-control">
+      <input type="range" id="gapSlider" min="0" max="0.3" step="0.01" value="0.08" aria-label="Spacing between photos">
+      <span id="gapLabel" class="sans">0.08 in</span>
+    </div>
+    <div class="fit-summary" id="fitSummary" style="margin-top:16px;">Upload a photo to see how many copies fit.</div>
+    <div class="sheet-preview-frame"><canvas id="sheetCanvas"></canvas></div>
+    <div class="actions">
+      <button class="btn btn-primary" id="printBtn" disabled>Print sheet</button>
+      <button class="btn btn-secondary" id="downloadBtn" disabled>Download PNG</button>
+    </div>
+    <p class="hint">Printing uses your browser's print dialog — set paper size and margins to "none" or "minimum" there for best results.</p>
+    <div class="nav-row">
+      <button class="btn btn-secondary" data-back="4">Back</button>
+      <button class="btn btn-primary" id="doneBtn">Done — start a new photo</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea" style="display:none;"></div>
+
+<script>
+(function() {
+  const TOTAL_STEPS = 5;
+  const stepLabels = ['Your photo','Photo size','Adjust to fit','Paper & layout','Preview & print'];
+  let currentStep = 1;
+  let DPI = 300;
+  let img = null;
+  let currentPhotoUnit = 'in';
+  let crop = null; // {sx,sy,sw,sh} in source-image pixel space
+  let cropAspectKey = null;
+
+  const dots = document.getElementById('stepperDots');
+  for (let i=1;i<=TOTAL_STEPS;i++){
+    const d=document.createElement('div');
+    d.className='dot';
+    d.setAttribute('role','img');
+    d.setAttribute('aria-label', 'Step ' + i + ' of ' + TOTAL_STEPS + ': ' + stepLabels[i-1]);
+    dots.appendChild(d);
+  }
+  const stepLabel = document.getElementById('stepLabel');
+
+  function toInches(v,u){ return u==='mm'? v/25.4 : u==='cm'? v/2.54 : v; }
+  function fromInches(v,u){ return u==='mm'? v*25.4 : u==='cm'? v*2.54 : v; }
+  function round2(v){ return Math.round(v*100)/100; }
+
+  function goToStep(n){
+    currentStep = n;
+    document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', +s.dataset.step === n));
+    document.querySelectorAll('.stepper .dot').forEach((d,i) => {
+      d.classList.toggle('active', i+1===n);
+      d.classList.toggle('done', i+1<n);
+      if (i+1===n) d.setAttribute('aria-current','step'); else d.removeAttribute('aria-current');
+    });
+    stepLabel.textContent = 'Step ' + n + ' of ' + TOTAL_STEPS + ': ' + stepLabels[n-1];
+    if (n === 3) enterCropStep();
+    if (n === 5) render();
+  }
+  document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => goToStep(+b.dataset.back)));
+  document.querySelectorAll('[data-next]').forEach(b => b.addEventListener('click', () => goToStep(+b.dataset.next)));
+
+  // ---- Step 1: upload ----
+  const fileInput = document.getElementById('fileInput');
+  const dropZone = document.getElementById('dropZone');
+  const previewWrap = document.getElementById('previewWrap');
+  const previewImg = document.getElementById('previewImg');
+  const changePhotoBtn = document.getElementById('changePhoto');
+  const next1 = document.getElementById('next1');
+
+  const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
+  const uploadError = document.getElementById('uploadError');
+  let currentObjectUrl = null; // tracks the active blob: URL so we can revoke it and avoid leaking memory
+
+  function showUploadError(msg){
+    uploadError.textContent = msg;
+    uploadError.style.display = 'block';
+  }
+  function clearUploadError(){
+    uploadError.style.display = 'none';
+    uploadError.textContent = '';
+  }
+
+  function releaseCurrentImage(){
+    // Drop the reference to the old decoded image and revoke its object URL
+    // so the browser can free that memory instead of accumulating it across uploads.
+    if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+    img = null;
+  }
+
+  function loadFile(file){
+    clearUploadError();
+    if (!file || !file.type.startsWith('image/')) {
+      if (file) showUploadError('Please choose an image file.');
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      showUploadError('That photo is ' + (file.size/1024/1024).toFixed(1) + 'MB — please choose one under 5MB.');
+      return;
+    }
+    releaseCurrentImage();
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      // If a newer upload started before this one finished, discard this result.
+      if (objectUrl !== currentObjectUrl) { URL.revokeObjectURL(objectUrl); return; }
+      img = image;
+      crop = null; cropAspectKey = null;
+      previewImg.src = objectUrl;
+      previewWrap.style.display = 'flex';
+      dropZone.style.display = 'none';
+      next1.disabled = false;
+      updatePrintDownloadState();
+    };
+    image.onerror = () => {
+      if (objectUrl === currentObjectUrl) { URL.revokeObjectURL(objectUrl); currentObjectUrl = null; }
+      showUploadError('Could not read that image — try a different file.');
+    };
+    currentObjectUrl = objectUrl;
+    image.src = objectUrl;
+  }
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+  ['dragover','dragenter'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('drag'); }));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); loadFile(e.dataTransfer.files[0]); });
+  changePhotoBtn.addEventListener('click', () => {
+    releaseCurrentImage();
+    crop = null; cropAspectKey = null;
+    previewImg.removeAttribute('src');
+    previewWrap.style.display = 'none';
+    dropZone.style.display = 'block';
+    fileInput.value = '';
+    next1.disabled = true;
+    clearUploadError();
+    updatePrintDownloadState();
+  });
+  next1.addEventListener('click', () => goToStep(2));
+
+  // ---- Step 2: photo size ----
+  const photoW = document.getElementById('photoW');
+  const photoH = document.getElementById('photoH');
+  document.getElementById('sizePresets').addEventListener('click', e => {
+    const btn = e.target.closest('.chip'); if (!btn) return;
+    document.querySelectorAll('#sizePresets .chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    if (btn.dataset.custom) { validatePhotoSize(); return; }
+    setPhotoUnit(btn.dataset.unit);
+    photoW.value = btn.dataset.w; photoH.value = btn.dataset.h;
+    validatePhotoSize();
+  });
+  function setPhotoUnit(unit){
+    if (unit === currentPhotoUnit) return;
+    const wIn = toInches(parseFloat(photoW.value)||0, currentPhotoUnit);
+    const hIn = toInches(parseFloat(photoH.value)||0, currentPhotoUnit);
+    currentPhotoUnit = unit;
+    photoW.value = round2(fromInches(wIn, unit));
+    photoH.value = round2(fromInches(hIn, unit));
+    document.querySelectorAll('[data-unit-set]').forEach(c => c.classList.toggle('active', c.dataset.unitSet === unit));
+  }
+  document.querySelectorAll('[data-unit-set]').forEach(btn => btn.addEventListener('click', () => {
+    setPhotoUnit(btn.dataset.unitSet);
+    document.querySelectorAll('#sizePresets .chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('customChip').classList.add('active');
+    validatePhotoSize();
+  }));
+  const next2 = document.getElementById('next2');
+  const photoSizeError = document.getElementById('photoSizeError');
+  function validatePhotoSize(){
+    const w = parseFloat(photoW.value), h = parseFloat(photoH.value);
+    const valid = Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0;
+    next2.disabled = !valid;
+    photoSizeError.style.display = valid ? 'none' : 'block';
+    return valid;
+  }
+  [photoW, photoH].forEach(inp => inp.addEventListener('input', () => {
+    document.querySelectorAll('#sizePresets .chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('customChip').classList.add('active');
+    validatePhotoSize();
+  }));
+  validatePhotoSize();
+
+  // ---- Step 3: adjust/crop ----
+  const cropFrame = document.getElementById('cropFrame');
+  const cropImg = document.getElementById('cropImg');
+  const zoomSlider = document.getElementById('zoomSlider');
+  let frameW=300, frameH=300, baseScale=1, scale=1, offX=0, offY=0;
+
+  function enterCropStep(){
+    if (!img) return;
+    const wIn = toInches(parseFloat(photoW.value)||1, currentPhotoUnit);
+    const hIn = toInches(parseFloat(photoH.value)||1, currentPhotoUnit);
+    const aspect = wIn / hIn;
+    const key = aspect.toFixed(4);
+    const available = Math.min(320, cropFrame.parentElement.clientWidth - 36 || 260, window.innerWidth - 60);
+    const maxW = Math.max(160, available), maxH = 360;
+    frameW = maxW; frameH = maxW / aspect;
+    if (frameH > maxH) { frameH = maxH; frameW = maxH * aspect; }
+    cropFrame.style.width = frameW + 'px';
+    cropFrame.style.height = frameH + 'px';
+    cropImg.src = previewImg.src;
+    baseScale = Math.max(frameW / img.width, frameH / img.height);
+    if (crop && cropAspectKey === key) {
+      scale = frameW / crop.sw;
+      offX = -crop.sx * scale;
+      offY = -crop.sy * scale;
+    } else {
+      scale = baseScale; offX = (frameW - img.width*scale)/2; offY = (frameH - img.height*scale)/2;
+    }
+    cropAspectKey = key;
+    zoomSlider.value = Math.min(3, Math.max(1, round2(scale / baseScale)));
+    applyCropTransform();
+  }
+  function clampOffsets(){
+    const dW = img.width*scale, dH = img.height*scale;
+    offX = Math.min(0, Math.max(frameW - dW, offX));
+    offY = Math.min(0, Math.max(frameH - dH, offY));
+  }
+  function applyCropTransform(){
+    clampOffsets();
+    cropImg.style.width = (img.width*scale) + 'px';
+    cropImg.style.height = (img.height*scale) + 'px';
+    cropImg.style.left = offX + 'px';
+    cropImg.style.top = offY + 'px';
+    crop = { sx: -offX/scale, sy: -offY/scale, sw: frameW/scale, sh: frameH/scale };
+  }
+  zoomSlider.addEventListener('input', () => {
+    const cx = frameW/2, cy = frameH/2;
+    const imgCx = (cx - offX)/scale, imgCy = (cy - offY)/scale;
+    scale = baseScale * parseFloat(zoomSlider.value);
+    offX = cx - imgCx*scale; offY = cy - imgCy*scale;
+    applyCropTransform();
+  });
+  let dragging=false, startX=0, startY=0, startOffX=0, startOffY=0;
+  function dragStart(x,y){ dragging=true; startX=x; startY=y; startOffX=offX; startOffY=offY; cropFrame.classList.add('dragging'); }
+  function dragMove(x,y){ if(!dragging) return; offX = startOffX + (x-startX); offY = startOffY + (y-startY); applyCropTransform(); }
+  function dragEnd(){ dragging=false; cropFrame.classList.remove('dragging'); }
+  cropFrame.addEventListener('mousedown', e => dragStart(e.clientX, e.clientY));
+  window.addEventListener('mousemove', e => dragMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', dragEnd);
+  cropFrame.addEventListener('touchstart', e => { const t=e.touches[0]; dragStart(t.clientX,t.clientY); }, {passive:true});
+  cropFrame.addEventListener('touchmove', e => { const t=e.touches[0]; dragMove(t.clientX,t.clientY); }, {passive:true});
+  cropFrame.addEventListener('touchend', dragEnd);
+
+  // ---- Step 4: paper/layout ----
+  const paperW = document.getElementById('paperW');
+  const paperH = document.getElementById('paperH');
+  const gapSlider = document.getElementById('gapSlider');
+  const gapLabel = document.getElementById('gapLabel');
+  const next4 = document.getElementById('next4');
+  const paperSizeError = document.getElementById('paperSizeError');
+
+  function validatePaperSize(){
+    const w = parseFloat(paperW.value), h = parseFloat(paperH.value);
+    const valid = Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0;
+    next4.disabled = !valid;
+    paperSizeError.style.display = valid ? 'none' : 'block';
+    return valid;
+  }
+
+  // Coalesce rapid-fire render calls (e.g. dragging the gap slider) into at most
+  // one render per animation frame, so a full-resolution redraw doesn't stack up
+  // faster than the browser can actually draw it and freeze the tab.
+  let renderScheduled = false;
+  function scheduleRender(){
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => { renderScheduled = false; render(); });
+  }
+
+  document.getElementById('paperPresets').addEventListener('click', e => {
+    const btn = e.target.closest('.chip'); if (!btn) return;
+    document.querySelectorAll('#paperPresets .chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    if (btn.dataset.custom) { validatePaperSize(); return; }
+    paperW.value = btn.dataset.pw; paperH.value = btn.dataset.ph;
+    validatePaperSize();
+  });
+  [paperW, paperH].forEach(inp => inp.addEventListener('input', () => {
+    document.querySelectorAll('#paperPresets .chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('customPaperChip').classList.add('active');
+    validatePaperSize();
+  }));
+  validatePaperSize();
+  gapSlider.addEventListener('input', () => { gapLabel.textContent = parseFloat(gapSlider.value).toFixed(2) + ' in'; scheduleRender(); });
+  document.getElementById('dpiPresets').addEventListener('click', e => {
+    const btn = e.target.closest('.chip'); if (!btn) return;
+    document.querySelectorAll('#dpiPresets .chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    DPI = parseInt(btn.dataset.dpi, 10);
+  });
+
+  // ---- Step 5: render sheet ----
+  const canvas = document.getElementById('sheetCanvas');
+  const ctx = canvas.getContext('2d');
+  const printBtn = document.getElementById('printBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const fitSummary = document.getElementById('fitSummary');
+  const canvasSizeWarning = document.getElementById('canvasSizeWarning');
+
+  // Hard safety net: beyond this many pixels (or pixels-per-side), browsers on
+  // phones/tablets in particular are prone to hanging or crashing the tab when
+  // asked to allocate and paint the canvas, or to encode it via toDataURL.
+  const MAX_CANVAS_PIXELS = 25_000_000; // ~25 megapixels
+  const MAX_CANVAS_SIDE = 10000; // px, per side
+
+  let canvasTooLarge = false; // tracks whether the last computed size was refused
+
+  function computeLayout(){
+    const photoWIn = toInches(parseFloat(photoW.value)||0.1, currentPhotoUnit);
+    const photoHIn = toInches(parseFloat(photoH.value)||0.1, currentPhotoUnit);
+    const sheetWIn = parseFloat(paperW.value) || 1;
+    const sheetHIn = parseFloat(paperH.value) || 1;
+    const gapIn = parseFloat(gapSlider.value) || 0;
+    const marginIn = 0.15;
+    const usableW = sheetWIn - marginIn*2, usableH = sheetHIn - marginIn*2;
+    const cols = Math.max(0, Math.floor((usableW+gapIn)/(photoWIn+gapIn)));
+    const rows = Math.max(0, Math.floor((usableH+gapIn)/(photoHIn+gapIn)));
+    return { photoWIn, photoHIn, sheetWIn, sheetHIn, gapIn, marginIn, cols, rows, total: cols*rows };
+  }
+
+  function drawCropped(image, x, y, w, h){
+    if (crop) ctx.drawImage(image, crop.sx, crop.sy, crop.sw, crop.sh, x, y, w, h);
+    else {
+      const imgR = image.width/image.height, cellR = w/h; let sx,sy,sw,sh;
+      if (imgR > cellR) { sh=image.height; sw=sh*cellR; sx=(image.width-sw)/2; sy=0; }
+      else { sw=image.width; sh=sw/cellR; sx=0; sy=(image.height-sh)/2; }
+      ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h);
+    }
+  }
+
+  // Single source of truth for whether Print/Download should be enabled —
+  // called after every render() and after upload/change-photo, so the state
+  // never goes stale when the user navigates back and changes something.
+  function updatePrintDownloadState(){
+    const L = computeLayout();
+    const enabled = !!img && L.total > 0 && !canvasTooLarge;
+    printBtn.disabled = !enabled;
+    downloadBtn.disabled = !enabled;
+  }
+
+  function render(){
+    const L = computeLayout();
+    const pxW = Math.round(L.sheetWIn*DPI), pxH = Math.round(L.sheetHIn*DPI);
+    const totalPixels = pxW * pxH;
+
+    canvasTooLarge = totalPixels > MAX_CANVAS_PIXELS || pxW > MAX_CANVAS_SIDE || pxH > MAX_CANVAS_SIDE;
+
+    if (canvasTooLarge) {
+      canvasSizeWarning.style.display = 'block';
+      fitSummary.innerHTML = 'This DPI and paper size combination is too large to render safely — lower the DPI or paper size.';
+      updatePrintDownloadState();
+      return; // don't touch canvas.width/height with an unsafe size
+    }
+    canvasSizeWarning.style.display = 'none';
+
+    if (L.cols === 0 || L.rows === 0) {
+      fitSummary.innerHTML = 'Photo is too large for this paper size at the current spacing.';
+    } else {
+      let warning = '';
+      if (img) {
+        const neededW = L.photoWIn*DPI, neededH = L.photoHIn*DPI;
+        if (img.width < neededW || img.height < neededH) warning = '<br><span style="color:#b5651d;">Your photo is lower resolution than this DPI needs — it may look soft. Try a higher-res photo or a lower DPI.</span>';
+      }
+      fitSummary.innerHTML = '<strong>'+L.total+'</strong> copies fit on this sheet &nbsp;('+L.cols+' across × '+L.rows+' down)'+warning;
+    }
+    canvas.width = pxW;
+    canvas.height = pxH;
+    const frameEl = canvas.parentElement;
+    const availableW = Math.max(120, (frameEl.clientWidth || 500) - 24);
+    const displayW = Math.min(500, availableW, canvas.width);
+    canvas.style.width = displayW + 'px';
+    canvas.style.height = 'auto';
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    if (img && L.total > 0) {
+      const photoWpx = L.photoWIn*DPI, photoHpx = L.photoHIn*DPI, gapPx = L.gapIn*DPI;
+      const gridW = L.cols*photoWpx + (L.cols-1)*gapPx, gridH = L.rows*photoHpx + (L.rows-1)*gapPx;
+      const startX = (canvas.width-gridW)/2, startY = (canvas.height-gridH)/2;
+      for (let r=0;r<L.rows;r++) for (let c=0;c<L.cols;c++) {
+        const x = startX + c*(photoWpx+gapPx), y = startY + r*(photoHpx+gapPx);
+        drawCropped(img, x, y, photoWpx, photoHpx);
+        ctx.strokeStyle = '#cccccc'; ctx.lineWidth = 1; ctx.strokeRect(x, y, photoWpx, photoHpx);
+      }
+    }
+    updatePrintDownloadState();
+  }
+
+  printBtn.addEventListener('click', () => {
+    if (canvasTooLarge || printBtn.disabled) return;
+    try {
+      const dataUrl = canvas.toDataURL('image/png');
+      const printArea = document.getElementById('printArea');
+      printArea.innerHTML = '<img src="'+dataUrl+'" style="width:100%; display:block;">';
+      printArea.style.display = 'block';
+      setTimeout(() => { window.print(); printArea.style.display = 'none'; }, 100);
+    } catch (err) {
+      alert('Could not prepare this sheet for printing. Try a lower DPI or smaller paper size.');
+    }
+  });
+  downloadBtn.addEventListener('click', () => {
+    if (canvasTooLarge || downloadBtn.disabled) return;
+    try {
+      const link = document.createElement('a');
+      link.download = 'photo-print-sheet.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      alert('Could not generate the download. Try a lower DPI or smaller paper size.');
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (currentStep === 3) enterCropStep();
+    if (currentStep === 5) render();
+  });
+
+  document.getElementById('doneBtn').addEventListener('click', () => {
+    // Full reset so the person can start over with a new photo from a clean state.
+    releaseCurrentImage();
+    crop = null; cropAspectKey = null;
+    previewImg.removeAttribute('src');
+    previewWrap.style.display = 'none';
+    dropZone.style.display = 'block';
+    fileInput.value = '';
+    next1.disabled = true;
+    clearUploadError();
+    updatePrintDownloadState();
+    goToStep(1);
+  });
+
+  goToStep(1);
+})();
+</script>
+</body>
+</html>
