@@ -1,6 +1,9 @@
-# Photo Print
-- Upload the image
-- Resize it according to your requirements (ex-passport size)
-- Print multiple copies on any custom size (ex-A4 size)
+# Fantastic Potato
 
-> Regard AmanNishad 📸
+A small frontend practice project built with HTML, CSS, and JavaScript.
+
+## Run
+Open `index.html` in a browser, or serve the folder with any simple local web server.
+
+## License
+MIT
